@@ -1,5 +1,15 @@
 import React from 'react';
-import { Check, X, Clock, FileText, ArrowRight, UserCheck } from 'lucide-react';
+import {
+  Check,
+  X,
+  Clock,
+  Send,
+  UserCheck,
+  AlertCircle,
+  HelpCircle,
+  ShieldCheck,
+  ShieldAlert
+} from 'lucide-react';
 
 export const TimelineView = ({ application, history = [] }) => {
   if (!application) return null;
@@ -16,52 +26,108 @@ export const TimelineView = ({ application, history = [] }) => {
     });
   };
 
-  // Find history records
-  const submissionRecord = history.find((h) => h.action === 'SUBMITTED');
-  const facultyRecord = history.find(
-    (h) => h.action === 'FACULTY_APPROVED' || h.action === 'FACULTY_REJECTED'
-  );
-  const hodRecord = history.find(
-    (h) => h.action === 'HOD_APPROVED' || h.action === 'HOD_REJECTED'
-  );
+  const normStatus = (application.status || '').toUpperCase();
 
-  const isFacultyRejected = application.facultyApproval?.status === 'REJECTED';
-  const isFacultyApproved = application.facultyApproval?.status === 'APPROVED';
-  const isFacultyPending = application.status === 'PENDING_FACULTY';
+  const isFacultyRejected =
+    application.facultyApproval?.status === 'REJECTED' ||
+    (normStatus === 'REJECTED' && application.rejectionBy?.role === 'faculty');
 
-  const isHodRejected = application.hodApproval?.status === 'REJECTED';
-  const isHodApproved = application.hodApproval?.status === 'APPROVED';
-  const isHodPending = application.status === 'PENDING_HOD';
+  const isFacultyApproved =
+    application.facultyApproval?.status === 'APPROVED' ||
+    application.facultyApproval?.status === 'FORWARDED' ||
+    normStatus === 'FORWARDED TO HOD' ||
+    normStatus === 'PENDING HOD APPROVAL' ||
+    normStatus === 'HOD APPROVED' ||
+    normStatus === 'FORWARDED TO ADMIN' ||
+    (normStatus === 'APPROVED' && application.facultyApproval?.status === 'APPROVED');
 
-  const isFinalApproved = application.status === 'APPROVED';
-  const isFinalRejected = application.status === 'REJECTED';
+  const isFacultyPending =
+    normStatus === 'PENDING FACULTY APPROVAL' || normStatus === 'PENDING_FACULTY';
+
+  const isHodRejected =
+    application.hodApproval?.status === 'REJECTED' ||
+    (normStatus === 'REJECTED' && application.rejectionBy?.role === 'hod');
+
+  const isHodApproved =
+    application.hodApproval?.status === 'APPROVED' ||
+    application.hodApproval?.status === 'FORWARDED' ||
+    normStatus === 'HOD APPROVED' ||
+    normStatus === 'APPROVED';
+
+  const isHodPending =
+    normStatus === 'PENDING HOD APPROVAL' ||
+    normStatus === 'FORWARDED TO HOD' ||
+    normStatus === 'PENDING_HOD';
+
+  const isFinalApproved = normStatus === 'APPROVED' || normStatus === 'HOD APPROVED';
+  const isFinalRejected = normStatus === 'REJECTED';
+  const isInfoRequired = normStatus.includes('ADDITIONAL') || normStatus.includes('INFORMATION');
 
   return (
-    <div className="py-4">
-      <div className="relative border-l-2 border-slate-200 ml-4 space-y-8">
+    <div className="py-2 space-y-6">
+      {/* Prominent High-Visibility Rejection Banner */}
+      {isFinalRejected && (
+        <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-xl shadow-sm space-y-2">
+          <div className="flex items-center gap-2 text-rose-800 font-bold text-sm">
+            <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+            <span>APPLICATION HAS BEEN REJECTED</span>
+          </div>
+          <div className="bg-white/80 p-3 rounded-lg border border-rose-200 text-xs text-rose-900 space-y-1">
+            <p className="font-semibold text-rose-700">Rejection Reason / Remarks:</p>
+            <p className="italic font-medium text-slate-800">
+              "{application.rejectionRemarks || 'Reason not specified.'}"
+            </p>
+            <div className="pt-2 text-[11px] text-rose-600 flex items-center justify-between border-t border-rose-100">
+              <span>
+                Decided by: <strong className="capitalize">{application.rejectionBy?.name || application.rejectionBy?.role || 'Approver'}</strong>
+              </span>
+              <span>{formatDate(application.rejectionBy?.timestamp || application.updatedAt)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Additional Information Banner */}
+      {isInfoRequired && (
+        <div className="p-4 bg-purple-50 border-2 border-purple-300 rounded-xl shadow-sm space-y-2">
+          <div className="flex items-center gap-2 text-purple-900 font-bold text-sm">
+            <HelpCircle className="w-5 h-5 text-purple-600 shrink-0" />
+            <span>ADDITIONAL INFORMATION REQUIRED</span>
+          </div>
+          <div className="bg-white/80 p-3 rounded-lg border border-purple-200 text-xs text-purple-900 space-y-1">
+            <p className="font-semibold text-purple-700">Clarification Request:</p>
+            <p className="italic font-medium text-slate-800">
+              "{application.infoRequests?.[application.infoRequests.length - 1]?.query || 'Please provide additional clarification.'}"
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Stepped Timeline */}
+      <div className="relative border-l-2 border-slate-200 ml-4 space-y-7">
         {/* Stage 1: Student Submission */}
         <div className="relative pl-6">
-          <div className="absolute -left-[17px] top-0.5 w-8 h-8 rounded-full bg-emerald-100 border-2 border-emerald-500 flex items-center justify-center text-emerald-600">
+          <div className="absolute -left-[17px] top-0 w-8 h-8 rounded-full bg-emerald-100 border-2 border-emerald-500 flex items-center justify-center text-emerald-600">
             <Check className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-slate-800">1. Student Submission</h4>
+              <h4 className="text-sm font-semibold text-slate-800">1. Student Application Submitted</h4>
               <span className="text-xs text-slate-500">{formatDate(application.createdAt)}</span>
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              Submitted by <span className="font-medium text-slate-800">{application.studentName}</span> ({application.regNo})
+              Applicant: <span className="font-medium text-slate-800">{application.studentName}</span> ({application.regNo})
             </p>
-            <div className="mt-1 text-xs bg-slate-50 p-2 rounded border border-slate-100 text-slate-700">
-              <span className="font-medium">Request:</span> {application.requestType} • <span className="font-medium">Reason:</span> {application.reason}
+            <div className="mt-1 text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-slate-700">
+              <span className="font-semibold text-slate-800">{application.requestType}:</span> {application.reason}
             </div>
           </div>
         </div>
 
-        {/* Stage 2: Faculty Review */}
+        {/* Stage 2: Faculty Mentor Endorsement */}
         <div className="relative pl-6">
           <div
-            className={`absolute -left-[17px] top-0.5 w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+            className={`absolute -left-[17px] top-0 w-8 h-8 rounded-full border-2 flex items-center justify-center ${
               isFacultyApproved
                 ? 'bg-emerald-100 border-emerald-500 text-emerald-600'
                 : isFacultyRejected
@@ -83,36 +149,36 @@ export const TimelineView = ({ application, history = [] }) => {
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-slate-800">2. Faculty Mentor Endorsement</h4>
+              <h4 className="text-sm font-semibold text-slate-800">2. Faculty Mentor Review</h4>
               <span className="text-xs text-slate-500">
                 {application.facultyApproval?.timestamp
                   ? formatDate(application.facultyApproval.timestamp)
                   : isFacultyPending
-                  ? 'Awaiting Action'
+                  ? 'Currently in Review'
                   : 'Pending'}
               </span>
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              Assigned Mentor: <span className="font-medium text-slate-800">{application.assignedFaculty?.name || 'Assigned Mentor'}</span>
+              Assigned Mentor: <span className="font-medium text-slate-800">{application.assignedFaculty?.name || 'Faculty Mentor'}</span>
             </p>
             {application.facultyApproval?.remarks && (
               <div
-                className={`mt-1 text-xs p-2 rounded border ${
+                className={`mt-1.5 text-xs p-2.5 rounded-lg border ${
                   isFacultyRejected
                     ? 'bg-rose-50 border-rose-200 text-rose-800'
-                    : 'bg-slate-50 border-slate-200 text-slate-700'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-900'
                 }`}
               >
-                <span className="font-medium">Faculty Remarks:</span> "{application.facultyApproval.remarks}"
+                <span className="font-semibold">Faculty Remarks:</span> "{application.facultyApproval.remarks}"
               </div>
             )}
           </div>
         </div>
 
-        {/* Stage 3: HOD Review */}
+        {/* Stage 3: HOD Sanction */}
         <div className="relative pl-6">
           <div
-            className={`absolute -left-[17px] top-0.5 w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+            className={`absolute -left-[17px] top-0 w-8 h-8 rounded-full border-2 flex items-center justify-center ${
               isHodApproved
                 ? 'bg-emerald-100 border-emerald-500 text-emerald-600'
                 : isHodRejected
@@ -129,17 +195,17 @@ export const TimelineView = ({ application, history = [] }) => {
             ) : isHodPending ? (
               <Clock className="w-4 h-4" />
             ) : (
-              <span className="text-xs font-bold">HOD</span>
+              <span className="text-[11px] font-bold">HOD</span>
             )}
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-slate-800">3. Head of Department (HOD) Sanction</h4>
+              <h4 className="text-sm font-semibold text-slate-800">3. Head of Department (HOD) Review</h4>
               <span className="text-xs text-slate-500">
                 {application.hodApproval?.timestamp
                   ? formatDate(application.hodApproval.timestamp)
                   : isHodPending
-                  ? 'Awaiting HOD'
+                  ? 'Awaiting HOD Sanction'
                   : 'Pending'}
               </span>
             </div>
@@ -148,22 +214,22 @@ export const TimelineView = ({ application, history = [] }) => {
             </p>
             {application.hodApproval?.remarks && (
               <div
-                className={`mt-1 text-xs p-2 rounded border ${
+                className={`mt-1.5 text-xs p-2.5 rounded-lg border ${
                   isHodRejected
                     ? 'bg-rose-50 border-rose-200 text-rose-800'
-                    : 'bg-slate-50 border-slate-200 text-slate-700'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-900'
                 }`}
               >
-                <span className="font-medium">HOD Remarks:</span> "{application.hodApproval.remarks}"
+                <span className="font-semibold">HOD Remarks:</span> "{application.hodApproval.remarks}"
               </div>
             )}
           </div>
         </div>
 
-        {/* Stage 4: Final Status */}
+        {/* Stage 4: Final Outcome */}
         <div className="relative pl-6">
           <div
-            className={`absolute -left-[17px] top-0.5 w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+            className={`absolute -left-[17px] top-0 w-8 h-8 rounded-full border-2 flex items-center justify-center ${
               isFinalApproved
                 ? 'bg-emerald-600 border-emerald-600 text-white'
                 : isFinalRejected
@@ -175,7 +241,7 @@ export const TimelineView = ({ application, history = [] }) => {
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-slate-800">4. Final Institutional Status</h4>
+              <h4 className="text-sm font-semibold text-slate-800">4. Final Administrative Decision</h4>
               <span className="text-xs text-slate-500">
                 {isFinalApproved || isFinalRejected
                   ? formatDate(application.updatedAt)
@@ -184,21 +250,33 @@ export const TimelineView = ({ application, history = [] }) => {
             </div>
             <div className="mt-2">
               {isFinalApproved && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs">
-                  <p className="font-bold">PERMISSION SANCTIONED</p>
-                  <p className="mt-0.5">This request has completed all levels of administrative review and is officially granted.</p>
+                <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-lg text-emerald-900 text-xs">
+                  <p className="font-bold text-emerald-800 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    OFFICIALLY SANCTIONED & APPROVED
+                  </p>
+                  <p className="mt-1 text-slate-700">
+                    This application has received complete institutional sanction. The student is authorized for the requested duration.
+                  </p>
                 </div>
               )}
               {isFinalRejected && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs">
-                  <p className="font-bold">APPLICATION REJECTED</p>
-                  <p className="mt-0.5">Reason: {application.rejectionRemarks || 'Request could not be accommodated.'}</p>
+                <div className="p-3 bg-rose-50 border border-rose-300 rounded-lg text-rose-900 text-xs">
+                  <p className="font-bold text-rose-800 flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-rose-600" />
+                    REQUEST REJECTED
+                  </p>
+                  <p className="mt-1 text-slate-800 font-medium">
+                    Reason: "{application.rejectionRemarks || 'Criteria not met.'}"
+                  </p>
                 </div>
               )}
               {!isFinalApproved && !isFinalRejected && (
                 <div className="p-2.5 bg-sky-50 border border-sky-100 rounded-lg text-sky-800 text-xs flex items-center gap-2">
                   <Clock className="w-4 h-4 shrink-0 text-sky-600 animate-pulse" />
-                  <span>Request is progressing through institutional approval stages.</span>
+                  <span>
+                    Current Stage: <strong>{application.status}</strong> (with {application.currentApproverRole?.toUpperCase() || 'Reviewer'})
+                  </span>
                 </div>
               )}
             </div>

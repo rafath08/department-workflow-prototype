@@ -44,18 +44,24 @@ const authRoutes = require('./routes/auth');
 const applicationRoutes = require('./routes/applications');
 const notificationRoutes = require('./routes/notifications');
 const adminRoutes = require('./routes/admin');
+const announcementRoutes = require('./routes/announcements');
+const eventRoutes = require('./routes/events');
 
 // /api mounts
 app.use('/api/auth', authRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/announcements', announcementRoutes);
+app.use('/api/events', eventRoutes);
 
 // Direct mounts fallback for Vercel serverless functions
 app.use('/auth', authRoutes);
 app.use('/applications', applicationRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/admin', adminRoutes);
+app.use('/announcements', announcementRoutes);
+app.use('/events', eventRoutes);
 
 // Centralized Error Handling Middleware
 app.use((err, req, res, next) => {

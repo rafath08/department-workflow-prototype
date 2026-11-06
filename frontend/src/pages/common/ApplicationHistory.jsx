@@ -10,7 +10,9 @@ import {
   ChevronRight,
   FileText,
   User,
-  RotateCcw
+  RotateCcw,
+  Printer,
+  ShieldAlert
 } from 'lucide-react';
 import StatusBadge from '../../components/common/StatusBadge';
 import api from '../../services/api';
@@ -78,11 +80,36 @@ export const ApplicationHistory = ({ onOpenApplicationModal }) => {
   };
 
   const handleExportCsv = () => {
-    const params = new URLSearchParams();
-    if (status !== 'ALL') params.append('status', status);
-    if (requestType !== 'ALL') params.append('requestType', requestType);
-    if (department !== 'ALL') params.append('department', department);
-    window.open(`/api/admin/export?${params.toString()}`, '_blank');
+    if (applications.length === 0) return;
+    const headers = ['Application ID', 'Student Name', 'Reg No', 'Department', 'Service Type', 'Reason', 'Start Date', 'End Date', 'Days', 'Status', 'Faculty Remarks', 'HOD Remarks', 'Rejection Reason'];
+    const rows = applications.map((a) => [
+      a.applicationId,
+      `"${a.studentName}"`,
+      a.regNo,
+      `"${a.department}"`,
+      `"${a.requestType}"`,
+      `"${(a.reason || '').replace(/"/g, '""')}"`,
+      new Date(a.startDate).toLocaleDateString(),
+      new Date(a.endDate).toLocaleDateString(),
+      a.totalDays,
+      a.status,
+      `"${(a.facultyApproval?.remarks || '').replace(/"/g, '""')}"`,
+      `"${(a.hodApproval?.remarks || '').replace(/"/g, '""')}"`,
+      `"${(a.rejectionRemarks || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `application_history_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
@@ -92,27 +119,34 @@ export const ApplicationHistory = ({ onOpenApplicationModal }) => {
         <div>
           <h2 className="text-xl font-bold text-slate-800">
             {role === 'student'
-              ? 'My Application Records'
+              ? 'My Application Records & Tracking'
               : role === 'faculty'
-              ? 'Mentee Approval History'
+              ? 'Faculty Mentee Approval Logs'
               : role === 'hod'
               ? 'Department Permission Archives'
-              : 'Institutional Application Archive'}
+              : 'Institutional Application Archive & Audit Logs'}
           </h2>
           <p className="text-xs text-slate-500">
-            Comprehensive audit logs, multi-stage approval tracking, and historical records.
+            Comprehensive audit logs, multi-stage approval tracking, approver remarks, and historical records.
           </p>
         </div>
 
-        {(role === 'admin' || role === 'hod') && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrint}
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-300 shadow-sm transition flex items-center gap-1.5"
+          >
+            <Printer className="w-4 h-4 text-slate-500" />
+            Print Report
+          </button>
           <button
             onClick={handleExportCsv}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs rounded-xl shadow transition flex items-center gap-1.5 shrink-0"
           >
             <Download className="w-4 h-4" />
-            Export Filtered CSV
+            Export CSV
           </button>
-        )}
+        </div>
       </div>
 
       {/* Filter and Search Console */}
@@ -147,32 +181,41 @@ export const ApplicationHistory = ({ onOpenApplicationModal }) => {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2.5 pt-1">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Status</label>
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Status Filter</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
             >
               <option value="ALL">All Statuses</option>
-              <option value="PENDING_FACULTY">Pending Faculty</option>
-              <option value="PENDING_HOD">Pending HOD</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
+              <option value="Pending Faculty Approval">Pending Faculty</option>
+              <option value="Pending HOD Approval">Pending HOD</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Additional Information Required">Info Required</option>
+              <option value="Forwarded to HOD">Forwarded to HOD</option>
+              <option value="Cancelled">Cancelled</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Request Category</label>
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Request Service</label>
             <select
               value={requestType}
               onChange={(e) => setRequestType(e.target.value)}
               className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
             >
-              <option value="ALL">All Categories</option>
+              <option value="ALL">All 10 Categories</option>
               <option value="On-Duty">On-Duty (OD)</option>
               <option value="Leave">Leave Request</option>
+              <option value="General Permission">General Permission</option>
+              <option value="Bonafide Certificate">Bonafide Certificate</option>
+              <option value="No Objection Certificate (NOC)">NOC Request</option>
               <option value="Event Participation">Event Participation</option>
-              <option value="Other Permission">Other Permission</option>
+              <option value="Internship Permission">Internship Permission</option>
+              <option value="Project Permission">Project Permission</option>
+              <option value="Academic Document Request">Academic Documents</option>
+              <option value="Other Department Request">Other Request</option>
             </select>
           </div>
 
@@ -234,7 +277,7 @@ export const ApplicationHistory = ({ onOpenApplicationModal }) => {
                   <th className="px-5 py-3">Department</th>
                   <th className="px-5 py-3">Category</th>
                   <th className="px-5 py-3">Duration</th>
-                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Status & Remarks</th>
                   <th className="px-5 py-3 text-right">Action</th>
                 </tr>
               </thead>
@@ -270,6 +313,17 @@ export const ApplicationHistory = ({ onOpenApplicationModal }) => {
                     </td>
                     <td className="px-5 py-3.5">
                       <StatusBadge status={app.status} />
+                      {app.rejectionRemarks && (
+                        <div className="text-[10px] text-rose-600 font-medium truncate mt-1 flex items-center gap-1">
+                          <ShieldAlert className="w-3 h-3 text-rose-500 shrink-0" />
+                          <span>Rejection: "{app.rejectionRemarks}"</span>
+                        </div>
+                      )}
+                      {app.facultyApproval?.remarks && !app.rejectionRemarks && (
+                        <div className="text-[10px] text-slate-500 truncate mt-1">
+                          Faculty: "{app.facultyApproval.remarks}"
+                        </div>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <button

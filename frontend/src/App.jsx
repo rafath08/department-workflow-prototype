@@ -5,7 +5,7 @@ import Navbar from './components/layout/Navbar';
 import Sidebar from './components/layout/Sidebar';
 import ViewApplicationModal from './components/modals/ViewApplicationModal';
 
-// Pages
+// Existing Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import StudentDashboard from './pages/student/StudentDashboard';
@@ -17,7 +17,17 @@ import UserManagement from './pages/admin/UserManagement';
 import WorkflowConfig from './pages/admin/WorkflowConfig';
 import ApplicationHistory from './pages/common/ApplicationHistory';
 
-// Protected Route Component
+// Newly Added Module Pages
+import ApplicationTracking from './pages/student/ApplicationTracking';
+import StudentServices from './pages/student/StudentServices';
+import AttendanceVerification from './pages/faculty/AttendanceVerification';
+import MentorshipRecords from './pages/faculty/MentorshipRecords';
+import DepartmentManagement from './pages/department/DepartmentManagement';
+import EventCalendar from './pages/calendar/EventCalendar';
+import ReportsAnalytics from './pages/reports/ReportsAnalytics';
+import SettingsPage from './pages/settings/SettingsPage';
+
+// Protected Layout Component
 const ProtectedLayout = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   const [selectedAppId, setSelectedAppId] = useState(null);
@@ -47,9 +57,11 @@ const ProtectedLayout = ({ children, allowedRoles }) => {
       <div className="flex-1 flex">
         <Sidebar />
         <main className="flex-1 p-6 md:p-8 max-w-7xl mx-auto w-full overflow-y-auto">
-          {React.cloneElement(children, {
-            onOpenApplicationModal: (id) => setSelectedAppId(id)
-          })}
+          {React.isValidElement(children)
+            ? React.cloneElement(children, {
+                onOpenApplicationModal: (id) => setSelectedAppId(id)
+              })
+            : children}
         </main>
       </div>
 
@@ -90,12 +102,32 @@ export const App = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Protected Application Routes */}
+          {/* Module A: Dashboard */}
           <Route
             path="/dashboard"
             element={
               <ProtectedLayout>
                 <DashboardDispatcher />
+              </ProtectedLayout>
+            }
+          />
+
+          {/* Module B: Application Management & Tracking */}
+          <Route
+            path="/tracking"
+            element={
+              <ProtectedLayout>
+                <ApplicationTracking />
+              </ProtectedLayout>
+            }
+          />
+
+          {/* Module D: Student Services Hub & Application Submit */}
+          <Route
+            path="/student-services"
+            element={
+              <ProtectedLayout allowedRoles={['student', 'admin']}>
+                <StudentServices />
               </ProtectedLayout>
             }
           />
@@ -109,6 +141,46 @@ export const App = () => {
             }
           />
 
+          {/* Module E: Faculty Portal */}
+          <Route
+            path="/faculty/attendance"
+            element={
+              <ProtectedLayout allowedRoles={['faculty', 'hod', 'admin']}>
+                <AttendanceVerification />
+              </ProtectedLayout>
+            }
+          />
+
+          <Route
+            path="/faculty/mentorship"
+            element={
+              <ProtectedLayout allowedRoles={['faculty', 'hod', 'admin']}>
+                <MentorshipRecords />
+              </ProtectedLayout>
+            }
+          />
+
+          {/* Module F: Department Management */}
+          <Route
+            path="/department"
+            element={
+              <ProtectedLayout>
+                <DepartmentManagement />
+              </ProtectedLayout>
+            }
+          />
+
+          {/* Module I: Calendar & Events */}
+          <Route
+            path="/calendar"
+            element={
+              <ProtectedLayout>
+                <EventCalendar />
+              </ProtectedLayout>
+            }
+          />
+
+          {/* Module H: History & SLA Reports */}
           <Route
             path="/history"
             element={
@@ -118,7 +190,16 @@ export const App = () => {
             }
           />
 
-          {/* Admin Dedicated Routes */}
+          <Route
+            path="/reports"
+            element={
+              <ProtectedLayout allowedRoles={['faculty', 'hod', 'admin']}>
+                <ReportsAnalytics />
+              </ProtectedLayout>
+            }
+          />
+
+          {/* Module J: User & Role Management (Admin) */}
           <Route
             path="/admin/users"
             element={
@@ -133,6 +214,16 @@ export const App = () => {
             element={
               <ProtectedLayout allowedRoles={['admin']}>
                 <WorkflowConfig />
+              </ProtectedLayout>
+            }
+          />
+
+          {/* Module K: Settings */}
+          <Route
+            path="/settings"
+            element={
+              <ProtectedLayout>
+                <SettingsPage />
               </ProtectedLayout>
             }
           />
